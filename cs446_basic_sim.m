@@ -102,29 +102,7 @@ for frame = 2:numIterations
             % Default setting next updated cell to empty if it doesnt fit
             % any of these scenarios
             if(current_cell == EMPTY)
-                updated_cell = EMPTY;                
- 
-% Do we need this?
-%             % If current cell empty and have neighboring plants and animals
-%             if(current_cell == EMPTY && plant_count~=0 && animal_count~=0)
-% 
-%                 % Cell becomes plant if more plants 
-%                 if(plant_count > animal_count)
-%                     updated_cell = PLANT;
-%                 % Cell becomes animal if more animals
-%                 elseif(animal_count > plant_count)
-%                     updated_cell = ANIMAL;
-%                 % Cell randomly chooses if equal amt of plants and animals
-%                 elseif(animal_count == plant_count)
-%                     choice_num = rand;
-%                     if(choice_num < 0.5) % Random 50/50
-%                         updated_cell = PLANT;
-%                     else
-%                         updated_cell = ANIMAL;
-%                     end
-%                 end
-%             end  
-                                 
+                updated_cell = EMPTY;                 
 
             % If current cell is a plant then there is a small chance for 
             % it to die at any given timestep
@@ -176,6 +154,9 @@ for frame = 2:numIterations
                     if (pollen_chance < prob_pollination)
                         updated_cell = POLLINATED_ANIMAL;
                     end
+                else
+                    % Move?
+                    updated_cell = ANIMAL;
                 end
                 
                 % Move the animal to a new cell. If there aren't any plants
@@ -185,9 +166,11 @@ for frame = 2:numIterations
                 num_neighbors = plant_count+animal_count;
                 if (num_neighbors == 0)
                     % Move to any cell
+                    updated_cell = ANIMAL;
                 elseif ( (0 < num_neighbors) && ...
                         (num_neighbors < length(neighbors)) )
                     % Move animal to limited # of cells
+                    updated_cell = ANIMAL;
                 elseif (num_neighbors == length(neighbors))
                     % Animal can't move, dies
                     updated_cell = EMPTY;
@@ -203,13 +186,13 @@ for frame = 2:numIterations
                     % Pollinate the plant
                 else
                     % Just keep the pollinated animal moving
+                    updated_cell = ANIMAL;
                 end
-            
+
+            end
             
             % Updating next grid with the new cell value
             grids(row - 1, col - 1, frame) = updated_cell;
-
-            end
         end
     end
 end
@@ -224,9 +207,9 @@ viz_axes = axes(viz_fig);
 
 % Set the colors
 map = [ 1       1       1;          % Empty Cell: white
-        109/255 188/255 0;          % Plant Cell
-        237/255 41/255  57/255;     % Growing Plant Cell
-        .6       0      0;          % Animal Cell: grey blue
+        40/255  191/255 118/255;    % Plant Cell: green
+        208/255 230/255 44/255;     % Growing Plant Cell: lime
+        125/255 100/255 70/255;     % Animal Cell: brown
         1       .8      .8];        % Pollinated Animal Cell: light blue
 
 colormap(viz_axes, map); 
@@ -243,9 +226,10 @@ for i = 1:numIterations
     %w = waitforbuttonpress;
 
     % Turn each grid into an image
-    image(viz_axes, grids(:, :, i));
+    image(viz_axes,grids(:, :, i));
 
     pause(1/animation_fps);
+    disp('hello')
 end
 
 disp("Simulation complete!");
