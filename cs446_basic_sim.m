@@ -98,6 +98,7 @@ for frame = 2:numIterations
             % Getting plant neighbor count and animal neighbor count
             plant_count = sum(neighbors == PLANT);
             animal_count = sum(neighbors == ANIMAL);
+            num_neighbors = plant_count + animal_count;
 
             % Default setting next cell to empty if it doesn't fit any of 
             % these scenarios. However, if any of the neighbor cells are 
@@ -172,6 +173,8 @@ for frame = 2:numIterations
                     pollen_pickup = rand;
                     if (pollen_pickup < prob_pollination)
                         updated_cell = POLLINATED_ANIMAL;
+                    else 
+                        updated_cell = ANIMAL;
                     end
                 else
                     updated_cell = ANIMAL;
