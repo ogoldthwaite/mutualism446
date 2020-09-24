@@ -25,6 +25,7 @@ PLANT = 2;
 GROWING_PLANT = 3;
 ANIMAL = 4;
 POLLINATED_ANIMAL = 5;
+MOVED_ANIMAL = 6;
 
 prob_init_plant = 0.1;  % initial probability a cell is plant
 prob_init_animal = 0.1;  % initial probability a cell is animal
@@ -98,27 +99,15 @@ for frame = 2:numIterations
             % Getting plant neighbor count and animal neighbor count
             plant_count = sum(neighbors == PLANT);
             animal_count = sum(neighbors == ANIMAL);
-            num_neighbors = plant_count + animal_count;
+            num_neighbors = plant_count+animal_count;
 
-            % Default setting next cell to empty if it doesn't fit any of 
-            % these scenarios. However, if any of the neighbor cells are 
-            % animal cells, then they will move to this empty cell.          
+            % Default setting next cell to empty. However, if 3 of the 
+            % neighbor cells are animal cells, then one will move to 
+            % this empty cell.          
             if(current_cell == EMPTY)
-                %updated_cell = EMPTY;    
-                
                 % Something can move here
-                if (num_neighbors>0) && (animal_count > 0)
-                    % We have animal neighbors that could move here
-                    % Create array of indices that have an animal
-                    animal_neighbors = find(neighbors==ANIMAL);
-                    %disp(animal_neighbors)
-                    %disp(neighbors(animal_neighbors(1)) + ' hello')
-                    % Randomly select one of animal neighbors
-                    chosen_one = randsample(animal_neighbors,1); 
+                if (animal_count == 3)
                     updated_cell = ANIMAL;
-                    % Now empty out that cell
-                    % grids(row - 1, col - 1, frame) = updated_cell;
-                    % neighbors = [north, east, south, west,  northeast, southeast, northwest, southwest];
                 else
                     % Nothing surrounding to move here
                     updated_cell = EMPTY;
@@ -162,42 +151,28 @@ for frame = 2:numIterations
                     % Pollinate the plant
                 else
                     % Just keep the pollinated animal moving
-                    updated_cell = ANIMAL;
+                    updated_cell = POLLINATED_ANIMAL;
                 end
 
             % If current cell is an animal and it is near a plant, then 
-            % there is a chance it will pick up pollen. Then, it moves.
+            % there is a chance it will pick up pollen. 
             elseif (current_cell == ANIMAL)
                 total_animal_count = animal_count + 1;
-                if (plant_count >= 1)
-                    pollen_pickup = rand;
-                    if (pollen_pickup < prob_pollination)
+                pollen_pickup = rand;
+                if (num_neighbors==8) || (animal_count>2)
+                    % Now that one of the animals moved to the empty 
+                    % cell, we must remove them from their current cell.
+                    % Also, death by overcrowding.
+                    updated_cell = EMPTY;
+                else
+                    if (plant_count >= 1) && (pollen_pickup < prob_pollination)
                         updated_cell = POLLINATED_ANIMAL;
-                    else 
+                    else
                         updated_cell = ANIMAL;
                     end
-                else
-                    updated_cell = ANIMAL;
                 end
-                
-%                 % Move the animal to a new cell. If there aren't any plants
-%                 % or animals in the surrounding cells, then it can move to 
-%                 % any cell. If the surrounding cells are all occupied, the 
-%                 % animal dies.
-%                 num_neighbors = plant_count+animal_count;
-%                 if (num_neighbors == 0)
-%                     % Move to any cell
-%                     updated_cell = ANIMAL;
-%                 elseif ( (0 < num_neighbors) && ...
-%                         (num_neighbors < length(neighbors)) )
-%                     % Move animal to limited # of cells
-%                     updated_cell = ANIMAL;
-%                 elseif (num_neighbors == length(neighbors))
-%                     % Animal can't move, dies
-%                     updated_cell = EMPTY;
-%                 end
-               
 
+ 
             end
             
             % Updating next grid with the new cell value
@@ -219,8 +194,7 @@ map = [ 1       1       1;          % Empty Cell: white
         40/255  191/255 118/255;    % Plant Cell: green
         1       1       0;          % Growing Plant Cell: yellow
         125/255 100/255 70/255;     % Animal Cell: brown
-        0       0       1];         % Pollinated Animal Cell: blue
-
+        0       0       1];          % Pollinated Animal Cell: blue
 colormap(viz_axes, map); 
 
 % Remove axis labels, make aspect ratio look good, and maintain that state
