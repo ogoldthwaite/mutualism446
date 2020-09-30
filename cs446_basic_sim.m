@@ -3,9 +3,7 @@
 % September 30, 2020
 % Initial Simulation for Mutualism
 
-
 %% Simulation Parameters %%%
-
 % Seed the random number generator for testing
 rng_set = rng(123456789);
 
@@ -28,15 +26,14 @@ ANIMAL = 5;
 POLLINATED_ANIMAL = 6;
 POLLEN = 7;
 
-
 prob_init_plant = 0.01; % initial probability a cell is plant
 prob_init_animal = 0.01; % initial probability a cell is animal
 prob_plant_death = 0.05; % probability plant death at each timestep
 prob_pollination = 0.5; % probability animal will pick up/drop pollen
-prob_pollen_production = 0.2; % chance that a plant will produce pollen
-prob_pollen_spread = 0.15; % chance that pollen will spread to an adjacent empty cell
-prob_animal_reproduce = .2; % chance that 2 animals will reproduce if conditions are good
-prob_random_move = 0.15; % chance that an animal will move randomly with no stimuli
+prob_pollen_production = 0.2; % chance a plant will produce pollen
+prob_pollen_spread = 0.15; % chance pollen spreads to an adjacent empty cell
+prob_animal_reproduce = .2; % chance 2 animals reproduce if conditions are good
+prob_random_move = 0.15; % chance an animal will move randomly with no stimuli
 
 %% Counters for statistics
 plant_counter = zeros(1, numIterations); % Keep track of the number of plants
@@ -108,7 +105,8 @@ for frame = 2:numIterations
              northeast, southeast, northwest, southwest];
 
             % List of Neighbor coordinates
-            neighbor_coords = [ row-1 col; row col-1; row+1 col; row col+1; row-1 col-1; row+1 col-1; row-1 col+1; row+1 col+1 ];                    
+            neighbor_coords = [ row-1 col; row col-1; row+1 col; ...
+                row col+1; row-1 col-1; row+1 col-1; row-1 col+1; row+1 col+1 ];                    
 
 
             %% Update cell
@@ -122,15 +120,20 @@ for frame = 2:numIterations
             norm_animal_count = sum(neighbors == ANIMAL);
             poll_animal_count = sum(neighbors == POLLINATED_ANIMAL);
     
-            animal_count = norm_animal_count + poll_animal_count; % Total animal count
-            plant_count = poll_plant_count + norm_plant_count; % Total plant count
+            % Total animal count
+            animal_count = norm_animal_count + poll_animal_count;
+            % Total plant count
+            plant_count = poll_plant_count + norm_plant_count;
 
 
             % Empty cell behavior
-            % If empty cell neighboring a pollinated plant than it will become a growing plant, highest priority
+            % If empty cell neighboring a pollinated plant than it will 
+            % become a growing plant, highest priority
             % If Empty cell is neighboring pollen it will become pollen, this
-            % will have to be restricted so it doesnt increase exponentially somehow
-            % If empty cell is neighboring a pollen producing plant it will become pollen
+            % will have to be restricted so it doesnt increase 
+            % exponentially somehow
+            % If empty cell is neighboring a pollen producing plant 
+            % it will become pollen
             % Else it will remain empty
             if(current_cell == EMPTY)
                 if(poll_plant_count > 0)
@@ -139,22 +142,27 @@ for frame = 2:numIterations
                     updated_cell = POLLEN;
                 elseif(plant_count > 0 && rand < prob_pollen_production)
                     updated_cell = POLLEN;
-                elseif(animal_count > 1 && plant_count > 0 && rand < prob_animal_reproduce)
+                elseif(animal_count > 1 && plant_count > 0 && ...
+                        rand < prob_animal_reproduce)
                     updated_cell = ANIMAL;
                 else
                     updated_cell = EMPTY;
                 end
             
             % Animal Behavior
-            % If next to plant has a chance to become pollen carrying animal, this takes a timestep so it cannot move and do this
-            % If next to pollen will become an empty cell because the pollen will become an animal (moving towards flower)
-            % If totally surrounded by other animals/plants it will die and become empty
-            % If no pollen currently nothing will happen (random movement later?)
+            % If next to plant has a chance to become pollen carrying animal,
+            % this takes a timestep so it cannot move and do this
+            % If next to pollen will become an empty cell because the pollen 
+            % will become an animal (moving towards flower)
+            % If totally surrounded by other animals/plants
+            % it will die and become empty
+            % If no pollen currently nothing will happen (random movement later)
             elseif (current_cell == ANIMAL)
-                if (plant_count > 0 && rand < prob_pollination) % Pollinated plants can pollinate too, hermaphroditic currently
+                % Pollinated plants can pollinate too, hermaphroditic currently
+                if (plant_count > 0 && rand < prob_pollination)
                     updated_cell = POLLINATED_ANIMAL; % Gets pollen from plant
                 elseif (pollen_count > 0)
-                    updated_cell = EMPTY; % Moving to pollen (done in pollen check)
+                    updated_cell = EMPTY; % Move to pollen -done in pollen check
                 elseif (plant_count + animal_count == 8)
                     updated_cell = EMPTY; % Death
                 else
@@ -163,14 +171,14 @@ for frame = 2:numIterations
             
             % Pollinated animal behavior
             % If next to plant has a chance to lose the pollen it's carrying
-            % If next to pollen cell will become empty to move like normal animal
+            % If next to pollen cell will become empty to move like norm animal
             % If totally surrounded will also die like normal animal
             % If no special conditonis are met will remain same like before
             elseif (current_cell == POLLINATED_ANIMAL)
                 if (plant_count > 0 && rand < prob_pollination)
                     updated_cell = ANIMAL; % Loses pollen
                 elseif (pollen_count > 0)
-                    updated_cell = EMPTY; % Moving to pollen (done in pollen check)
+                    updated_cell = EMPTY; % Move to pollen -done in pollen check
                 elseif (plant_count + animal_count == length(neighbors))
                     updated_cell = EMPTY; % Death
                 else
@@ -178,8 +186,11 @@ for frame = 2:numIterations
                 end
 
             % Pollen cell state behavior
-            % If next to an animal or pollinated animal will become one of them, pollinated higher priority
-            % Elseif next to empty cell will become empty (empty will then become pollen)
+            % If next to an animal or pollinated animal will become one of them,
+            % pollinated higher priority
+            
+            % Elseif next to empty cell will become empty 
+            % (empty will then become pollen)
             elseif (current_cell == POLLEN)
                 if(animal_count == 1)
                     if (poll_animal_count > 0)
@@ -197,7 +208,8 @@ for frame = 2:numIterations
                 updated_cell = PLANT;
 
             % Normal plant state behavior
-            % If next to pollinated animal then has chance to become a pollinated plant
+            % If next to pollinated animal then has chance to become
+            % a pollinated plant
             % Else just has small random chance to die
             % Else if nothing happens, just remains a plant
             elseif (current_cell == PLANT)
@@ -210,7 +222,8 @@ for frame = 2:numIterations
                 end
 
             % Pollinated Plant state behavior
-            % If next to an empty cell then turns into a normal plant since new plant will grow in said empty cell
+            % If next to an empty cell then turns into a normal plant 
+            % since new plant will grow in said empty cell
             % Else just remains pollinated, waiting for empty location
             elseif (current_cell == POLLINATED_PLANT)
                 if(empty_count > 0)
@@ -225,6 +238,7 @@ for frame = 2:numIterations
         end
     end
     
+    % Recalculate the number of animals and plants for tracking
     animal_counter(frame) = sum(sum(grids(:,:,frame)==ANIMAL)) +...
                               sum(sum(grids(:,:,frame)==POLLINATED_ANIMAL));
     plant_counter(frame) = sum(sum(grids(:,:,frame)==PLANT)) + ...
@@ -260,8 +274,8 @@ disp("Drawing...");
 for i = 1:numIterations
 
     
-    % Following line allows for frame-by-frame viewing of grid
-%     w = waitforbuttonpress;
+    % Uncomment following line to allow for frame-by-frame viewing of grid
+    %     w = waitforbuttonpress;
 
     if(i>1) % Refresh the image
         delete(time_counter_text);
