@@ -11,9 +11,9 @@ rng_set = rng(123456789);
 
 % Time-related variables
 dt = 1;             % timestep, increment by days
-simLength = 360;    % length of simulation: 1 year
+simLength = 365;    % length of simulation: 1 year
 numIterations = 1 + simLength/dt;
-animation_fps = 5;  % Speed of visuazation
+animation_fps = 15;  % Speed of visualization
 
 % Grid dimensions
 row_count = 30; % width
@@ -35,8 +35,12 @@ prob_plant_death = 0.05; % probability plant death at each timestep
 prob_pollination = 0.5; % probability animal will pick up/drop pollen
 prob_pollen_production = 0.2; % chance that a plant will produce pollen
 prob_pollen_spread = 0.15; % chance that pollen will spread to an adjacent empty cell
-prob_animal_reproduce = .2 % chance that 2 animals will reproduce if conditions are good
+prob_animal_reproduce = .2; % chance that 2 animals will reproduce if conditions are good
 prob_random_move = 0.15; % chance that an animal will move randomly with no stimuli
+
+%% Counters for statistics
+plant_counter = zeros(1, numIterations); % Keep track of the number of plants
+animal_counter = zeros(1, numIterations); % Keep track # of animals
 
 %% Set up grids
 % Initialize grid to be all empty
@@ -59,6 +63,12 @@ for row = 1:row_count
     end
 end
 
+% First value for counters
+animal_counter(1) = sum(sum(grids(:,:,1)==ANIMAL)) +...
+                              sum(sum(grids(:,:,1)==POLLINATED_ANIMAL));
+plant_counter(1) = sum(sum(grids(:,:,1)==PLANT)) + ...
+                             sum(sum(grids(:,:,1)==GROWING_PLANT)) + ...
+                             sum(sum(grids(:,:,1)==POLLINATED_PLANT));
 disp("Grids Initialized");
 
 %% Main Simulation Loop
@@ -214,6 +224,12 @@ for frame = 2:numIterations
             grids(row-1, col-1 , frame) = updated_cell;
         end
     end
+    
+    animal_counter(frame) = sum(sum(grids(:,:,frame)==ANIMAL)) +...
+                              sum(sum(grids(:,:,frame)==POLLINATED_ANIMAL));
+    plant_counter(frame) = sum(sum(grids(:,:,frame)==PLANT)) + ...
+                             sum(sum(grids(:,:,frame)==GROWING_PLANT)) + ...
+                             sum(sum(grids(:,:,frame)==POLLINATED_PLANT));
 end
 
 disp("All grids calculated");
@@ -242,14 +258,47 @@ hold on;
 
 disp("Drawing...");
 for i = 1:numIterations
+
     
     % Following line allows for frame-by-frame viewing of grid
-    %w = waitforbuttonpress;
+    w = waitforbuttonpress;
 
+    if(i>1) % Refresh the image
+        delete(time_counter_text);
+        delete(animal_counter_text);
+        delete(plant_counter_text);
+    end
+    
     % Turn each grid into an image
     image(viz_axes, grids(:, :, i));
-
+    
+    % Draw text
+    time_counter_text = text(viz_axes,0.1,1.025,"Current Time Step: " + ...
+        string(i), 'Units', 'Normalized');
+    animal_counter_text = text(viz_axes,0.9,0,"Animals: " + ...
+            animal_counter(i), 'Units', 'Normalized');
+    plant_counter_text = text(viz_axes,0.9,0.05,"Plants: " + ...
+        plant_counter(i), 'Units', 'Normalized');
+    
     pause(1/animation_fps);
 end
+
+% Create the graphs for the counters
+animal_fig = figure;
+animal_axes = axes(animal_fig);
+
+plant_fig = figure;
+plant_axes = axes(plant_fig);
+
+plot(animal_axes, 1:numIterations, animal_counter);
+plot(plant_axes, 1:numIterations, plant_counter);
+
+title(animal_axes, "Animal Population Throughout Simulation");
+ylabel(animal_axes, "Number of animals (incl. pollen-carrying)");
+xlabel(animal_axes, "Time step");
+
+title(plant_axes, "Plant Population Throughout Simulation");
+ylabel(plant_axes, "Number of animals (incl. growing and pollinated)");
+xlabel(plant_axes, "Time step");
 
 disp("Simulation complete!");
