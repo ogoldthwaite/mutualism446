@@ -163,7 +163,7 @@ for frame = 2:numIterations
                     updated_cell = POLLINATED_ANIMAL; % Gets pollen from plant
                 elseif (pollen_count > 0)
                     updated_cell = EMPTY; % Move to pollen -done in pollen check
-                elseif (plant_count + animal_count == 8)
+                elseif (plant_count + animal_count == length(neighbors))
                     updated_cell = EMPTY; % Death
                 else
                     updated_cell = ANIMAL; % Nothing happens
@@ -310,12 +310,12 @@ plot(plant_axes, 1:numIterations, plant_counter);
 title(animal_axes, "Animal Population Throughout Simulation");
 ylabel(animal_axes, "Number of animals (incl. pollen-carrying)");
 xlabel(animal_axes, "Time step");
-ylim(animal_axes, [0, max(animal_counter)+5]);
+ylim(animal_axes, [0, max(animal_counter)+5]); % Extend the maximum y limit
 
 title(plant_axes, "Plant Population Throughout Simulation");
 ylabel(plant_axes, "Number of animals (incl. growing and pollinated)");
 xlabel(plant_axes, "Time step");
-ylim(plant_axes, [0, max(plant_counter)+5]);
+ylim(plant_axes, [0, max(plant_counter)+5]); % Extend the maximum y limit
 
 
 disp("Simulation complete!");
