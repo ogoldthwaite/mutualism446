@@ -1,6 +1,6 @@
 % CS446 -- Computational Modeling and Simulation II
 % Owen Goldthwaite, Gautam Mitra, Lolo Niemiec
-% September 15, 2020
+% September 30, 2020
 % Initial Simulation for Mutualism
 
 
@@ -171,7 +171,7 @@ for frame = 2:numIterations
                     updated_cell = ANIMAL; % Loses pollen
                 elseif (pollen_count > 0)
                     updated_cell = EMPTY; % Moving to pollen (done in pollen check)
-                elseif (plant_count + animal_count == 8)
+                elseif (plant_count + animal_count == length(neighbors))
                     updated_cell = EMPTY; % Death
                 else
                     updated_cell = POLLINATED_ANIMAL;
@@ -261,7 +261,7 @@ for i = 1:numIterations
 
     
     % Following line allows for frame-by-frame viewing of grid
-    w = waitforbuttonpress;
+%     w = waitforbuttonpress;
 
     if(i>1) % Refresh the image
         delete(time_counter_text);
@@ -290,15 +290,18 @@ animal_axes = axes(animal_fig);
 plant_fig = figure;
 plant_axes = axes(plant_fig);
 
-plot(animal_axes, 1:numIterations, animal_counter);
+plot(animal_axes, 1:numIterations, animal_counter, 'color', [1 0.5 0.17]);
 plot(plant_axes, 1:numIterations, plant_counter);
 
 title(animal_axes, "Animal Population Throughout Simulation");
 ylabel(animal_axes, "Number of animals (incl. pollen-carrying)");
 xlabel(animal_axes, "Time step");
+ylim(animal_axes, [0, max(animal_counter)+5]);
 
 title(plant_axes, "Plant Population Throughout Simulation");
 ylabel(plant_axes, "Number of animals (incl. growing and pollinated)");
 xlabel(plant_axes, "Time step");
+ylim(plant_axes, [0, max(plant_counter)+5]);
+
 
 disp("Simulation complete!");
