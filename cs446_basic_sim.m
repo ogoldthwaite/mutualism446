@@ -117,6 +117,7 @@ for frame = 2:numIterations
 
             norm_plant_count = sum(neighbors == PLANT);
             poll_plant_count = sum(neighbors == POLLINATED_PLANT);
+            grow_plant_count = sum(neighbors == GROWING_PLANT);
             norm_animal_count = sum(neighbors == ANIMAL);
             poll_animal_count = sum(neighbors == POLLINATED_ANIMAL);
     
@@ -124,12 +125,14 @@ for frame = 2:numIterations
             animal_count = norm_animal_count + poll_animal_count;
             % Total plant count
             plant_count = poll_plant_count + norm_plant_count;
+            % Total amount of neighbors
+            num_neighbors = animal_count + plant_count + pollen_count;
 
 
             % Empty cell behavior
             % If empty cell neighboring a pollinated plant than it will 
             % become a growing plant, highest priority
-            % If Empty cell is neighboring pollen it will become pollen, this
+            % If Empty cell is neighboring pollen it will become pollen, 
             % will have to be restricted so it doesnt increase 
             % exponentially somehow
             % If empty cell is neighboring a pollen producing plant 
@@ -159,12 +162,23 @@ for frame = 2:numIterations
             % If no pollen currently nothing will happen (random movement later)
             elseif (current_cell == ANIMAL)
                 % Pollinated plants can pollinate too, hermaphroditic currently
-                if (plant_count > 0 && rand < prob_pollination)
+                if ((row == 2 || row == row_count+1 || col == 2 || ...
+                       col == col_count+1) && (sum(neighbors ~= EMPTY)==5))
+                    % Edge piece surrounded
+                    updated_cell = EMPTY;
+                elseif (((row==2 && col==2) || ...
+                        (row==row_count+1 && col==2) || ...
+                        (row==2 && col==col_count+1) || ...
+                        (row==row_count+1 && col==col_count+1)) && ...
+                        (sum(neighbors ~= EMPTY)==3))
+                    % Corner piece surrounded
+                    updated_cell = EMPTY;
+                elseif (plant_count > 0 && rand < prob_pollination)
                     updated_cell = POLLINATED_ANIMAL; % Gets pollen from plant
                 elseif (pollen_count > 0)
-                    updated_cell = EMPTY; % Move to pollen -done in pollen check
+                    updated_cell = EMPTY; % Move to pollen 
                 elseif (plant_count + animal_count == length(neighbors))
-                    updated_cell = EMPTY; % Death
+                    updated_cell = EMPTY; % Surrounded => death
                 else
                     updated_cell = ANIMAL; % Nothing happens
                 end
@@ -175,7 +189,18 @@ for frame = 2:numIterations
             % If totally surrounded will also die like normal animal
             % If no special conditonis are met will remain same like before
             elseif (current_cell == POLLINATED_ANIMAL)
-                if (plant_count > 0 && rand < prob_pollination)
+                if ((row == 2 || row == row_count+1 || col == 2 || ...
+                       col == col_count+1) && (sum(neighbors ~= EMPTY)==5))
+                    % Edge piece surrounded
+                    updated_cell = EMPTY;
+                elseif (((row==2 && col==2) || ...
+                        (row==row_count+1 && col==2) || ...
+                        (row==2 && col==col_count+1) || ...
+                        (row==row_count+1 && col==col_count+1)) && ...
+                        (sum(neighbors ~= EMPTY)==3))
+                    % Corner piece surrounded
+                    updated_cell = EMPTY;
+                elseif (plant_count > 0 && rand < prob_pollination)
                     updated_cell = ANIMAL; % Loses pollen
                 elseif (pollen_count > 0)
                     updated_cell = EMPTY; % Move to pollen -done in pollen check
@@ -256,12 +281,12 @@ viz_axes = axes(viz_fig);
 
 % Set the colors
 map = [ 1       1       1;          % Empty Cell: white
-        0  1  0;                    % Growing Plant Cell
-        109/255 188/255 0;          % Plant Cell
-        109/255 120/255 0;          % Pollinated plant
-        125/255 100/255  70/255;          % Animal Cell: grey blue 
-        0       0      0;          % Pollinated Animal Cell: light blue
-        230/255 255/255 0];         % Pollen color        
+        0  1  0;                    % Growing Plant Cell: Lime Green
+        109/255 188/255 0;          % Plant Cell: Green
+        109/255 120/255 0;          % Pollinated plant: Camo Green
+        125/255 100/255  70/255;    % Animal Cell: Brown 
+        0       0      0;           % Pollinated Animal Cell: Black
+        230/255 255/255 0];         % Pollen color: Yellow     
 
 colormap(viz_axes, map); 
 
@@ -275,7 +300,7 @@ for i = 1:numIterations
 
     
     % Uncomment following line to allow for frame-by-frame viewing of grid
-    %     w = waitforbuttonpress;
+    w = waitforbuttonpress;
 
     if(i>1) % Refresh the image
         delete(time_counter_text);
