@@ -32,7 +32,7 @@ prob_plant_death = 0.05; % probability plant death at each timestep
 prob_pollination = 0.5; % probability animal will pick up/drop pollen
 prob_pollen_production = 0.2; % chance a plant will produce pollen
 prob_pollen_spread = 0.15; % chance pollen spreads to an adjacent empty cell
-prob_animal_reproduce = .2; % chance 2 animals reproduce if conditions are good
+prob_animal_reproduce = .1; % chance 2 animals reproduce if conditions are good
 prob_random_move = 0.15; % chance an animal will move randomly with no stimuli
 
 %% Counters for statistics
