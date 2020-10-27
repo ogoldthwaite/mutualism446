@@ -145,7 +145,7 @@ for frame = 2:numIterations
             % Total animal count
             animal_count = norm_animal_count + poll_animal_count;
             % Total plant count
-            % Take note: pollen and growing plants not included 
+            % Note: pollen and growing plants not included 
             plant_count = poll_plant_count + norm_plant_count;        
             % Total amount of neighbors
             num_neighbors = animal_count + plant_count + pollen_count;
@@ -159,7 +159,7 @@ for frame = 2:numIterations
                 end
             end
             
-            % Getting total number of all plants in neighboring cells
+            % Getting total amount of all pollen in neighboring cells
             if (plant_count > 0)
                 neighbor_pollen_conc = 0;
                 for val = 1:length(neighbors)
@@ -169,6 +169,11 @@ for frame = 2:numIterations
             end
 
             % Empty cell behavior
+            % If neighboring pollinated plants, becomes growing plant
+            % If neighboring pollen, pollen will spread to the empty cell
+            % If neighboring pollinated plant, chance of pollen producing
+            % If animals near, small chance animals will diffuse into cell
+            % Otherwise the cell will remain empty
             if(current_cell == EMPTY)
                 if(poll_plant_count > 0 && rand < prob_plant_growth)
                     updated_cell = GROWING_PLANT;
@@ -190,29 +195,14 @@ for frame = 2:numIterations
                 end
             
             % Animal Behavior
+            % If empty cells are near, then animals will diffuse to them
+            % If pollen is near, then becomes empty to move towards pollen
+            % Dies if surrounded ->> should change this
+            % If near pollinated plant, then picks up pollen
+            % Possible for the animals to die at every timestep
+            % Otherwise, animal remains the same
             elseif (current_cell == ANIMAL)             
                 updated_pollen_cell = 0;
-                % Diffusion of animals to empty cells
-                % This might need to be low on priority
-                if(empty_count > 0 && rand < animal_empty_diffuse_rate)
-                    pop_loss = current_animal_pop_cell * animal_pollen_diffuse_rate;
-                    updated_animal_pop_cell = current_animal_pop_cell - population_loss;
-                    % Becomes empty if no animals left, otherwise empty
-                    if(updated_animal_pop_cell > 1)
-                        updated_cell = ANIMAL;
-                    else
-                        updated_cell = EMPTY;
-                    end
-                    
-               elseif (pollen_count > 0)
-                    updated_cell = EMPTY; % Move to pollen                                
-                    pop_loss = current_animal_pop_cell * pollen_diffuse_rate;
-                    updated_animal_pop_cell = current_animal_pop_cell - pop_loss;
-                    
-                    if (updated_animal_pop_cell > 1)
-                        updated_cell = ANIMAL;
-                    end
-                end
                           
                 % Pollinated plants can pollinate too, hermaphroditic currently
                 if ((row == 2 || row == row_count+1 || col == 2 || ...
@@ -228,20 +218,49 @@ for frame = 2:numIterations
                     % Corner piece surrounded
                     updated_cell = EMPTY;
                     updated_animal_pop_cell = 0;
+                                % Diffusion of animals to empty cells
+                                
+                % This might need to be low on priority
+                elseif(empty_count > 0 && rand < animal_empty_diffuse_rate)
+                    pop_loss = current_animal_pop_cell * animal_pollen_diffuse_rate;
+                    updated_animal_pop_cell = current_animal_pop_cell - pop_loss;
+                    % Becomes empty if no animals left, otherwise empty
+                    if(updated_animal_pop_cell > 1)
+                        updated_cell = ANIMAL;
+                    else
+                        updated_cell = EMPTY;
+                    end
+                    
+               elseif (pollen_count > 0)
+                    updated_cell = EMPTY; % Move to pollen                                
+                    pop_loss = current_animal_pop_cell * pollen_diffuse_rate;
+                    updated_animal_pop_cell = current_animal_pop_cell - pop_loss;
+                    
+                    if (updated_animal_pop_cell > 1)
+                        updated_cell = ANIMAL;
+                    end
+                    
                 elseif (poll_plant_count > 0 && rand < prob_pollination)
                     updated_cell = POLLINATED_ANIMAL; % Gets pollen from plant
                     % updated poll cell = amt of pollen for animal
-                elseif (rand<prob_animal_death)
+                    
+                elseif (rand < prob_animal_death)
                     updated_cell = EMPTY;
                     updated_animal_pop_cell = 0;
+                    
 %               elseif (plant_count + animal_count == length(neighbors))
-%                   updated_cell = EMPTY; % Surrounded => death                   
+%                   updated_cell = EMPTY; % Surrounded => death   
+
                 else
                     updated_cell = ANIMAL; % Nothing happens
                     updated_animal_pop_cell = current_animal_pop_cell;
                 end
             
             % Pollinated animal behavior
+            % If the pollinated animal surrounded --> death (change this)
+            % If plants are near, then chance it will drop pollen on plant
+            % If pollen is near, animal moves toward pollen, cell empties
+            % Otherwise, remains the same
             elseif (current_cell == POLLINATED_ANIMAL)
                 if ((row == 2 || row == row_count+1 || col == 2 || ...
                        col == col_count+1) && (sum(neighbors ~= EMPTY)==5))
@@ -275,6 +294,9 @@ for frame = 2:numIterations
                 end
 
             % Pollen cell state behavior
+            % If near normal animals, then animals will move to this cell
+            % If near pollinated animals, then animals will move to cell
+            % Otherwise, remains as pollen
             elseif (current_cell == POLLEN)
                 if (norm_animal_count > 0)
                     updated_cell = ANIMAL;
@@ -303,10 +325,13 @@ for frame = 2:numIterations
             elseif (current_cell == GROWING_PLANT)
                 updated_cell = PLANT;                   
                 updated_animal_pop_cell = 0;
-                updated_pollen_cell = 0;
-                
+                updated_pollen_cell = 0;               
 
             % Normal plant state behaviors
+            % Chance that the plant will become pollinated every timestep
+            % If near pollinated animals, chance of becoming pollinated
+            % Chance that plant will die every timestep
+            % Otherwise, just remains as a plant
             elseif (current_cell == PLANT)
                 updated_animal_pop_cell = 0;
                 if(rand < prob_pollination)
@@ -325,8 +350,13 @@ for frame = 2:numIterations
                 end
 
             % Pollinated Plant state behavior
+            % If empty cells are near, then pollen diffuses out from the
+            % plant, and if too much pollen diffuses it becomes a normal
+            % plant, otherwise it will remain as a pollinated plant
+            % Chance of pollinated plant dying every timestep
+            % Otherwise remains the same
             elseif (current_cell == POLLINATED_PLANT)
-                % need to reproduce new pollen each iteration
+                % Need to reproduce new pollen each iteration
                 if (empty_count>0)
                     updated_pollen_cell = current_pollen_conc_cell * (1-pollen_diffuse_rate);
                     if (updated_pollen_cell > 1)
@@ -390,7 +420,7 @@ for i = 1:numIterations
 
     
     % Uncomment following line to allow for frame-by-frame viewing of grid
-%     w = waitforbuttonpress;
+%      w = waitforbuttonpress;
     
 %     heatmap(viz_fig, grids(:,:,i))
 %     hmap = heatmap(viz_fig, grids(:,:,i));
@@ -444,7 +474,7 @@ xlabel(animal_axes, "Time step");
 ylim(animal_axes, [0, max(animal_counter)+5]); % Extend the maximum y limit
 
 title(plant_axes, "Plant Population Throughout Simulation");
-ylabel(plant_axes, "Number of animals (incl. growing and pollinated)");
+ylabel(plant_axes, "Number of plants (incl. growing and pollinated)");
 xlabel(plant_axes, "Time step");
 ylim(plant_axes, [0, max(plant_counter)+5]); % Extend the maximum y limit
 
