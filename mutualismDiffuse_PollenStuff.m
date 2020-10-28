@@ -9,9 +9,9 @@ rng_set = rng(123456789);
 
 % Time-related variables
 dt = 1;             % timestep, increment by days
-simLength = 500;    % length of simulation: 1 year
+simLength = 100;    % length of simulation: 1 year
 numIterations = 1 + simLength/dt;
-animation_fps = 100;  % Speed of visualization
+animation_fps = 50;  % Speed of visualization
 
 % Grid dimensions
 row_count = 30; % width
@@ -25,20 +25,22 @@ POLLINATED_PLANT = 4;
 ANIMAL = 5;
 POLLINATED_ANIMAL = 6;
 POLLEN = 7;
+ANIMAL_MOVE_SPOT = 8;
 
 prob_init_plant = 0.01; % initial probability a cell is plant
-prob_init_animal = 0.00; % initial probability a cell is animal
+prob_init_animal = 0.01; % initial probability a cell is animal
 prob_plant_death = 0.05; % probability plant death at each timestep
 prob_pollination = 0.5; % probability animal will pick up/drop pollen
 prob_pollen_production = 0.5; % chance a plant will produce pollen
 prob_pollen_spread = 0.15; % chance pollen spreads to an adjacent empty cell
 prob_animal_reproduce = 0.75; % chance 2 animals reproduce if conditions are good
 
-init_animal_count = 10000; % Number of animals at initial animal spawn points
+init_animal_count = 100; % Number of animals at initial animal spawn points
 init_plant_count = 1; % Number of animals at initial animal spawn points
 init_pollen_count = 100; % Amount of pollen spawned when it is spawned
-animal_diffuse_rate = 0.01; % Amount of animals that will diffuse over to lower pop tile
-pollen_diffuse_rate = 0.01; % Amount of pollen that will diffuse to lower conc tile
+animal_diffuse_rate = 0.20; % Amount of animals that will diffuse over to lower pop tile
+animal_pollen_diffuse_rate = 0.70; % Amount of animals that will diffuse to highest pollen concentration tile
+pollen_diffuse_rate = 0.03; % Amount of pollen that will diffuse to lower conc tile
 
 
 %% Counters for statistics
@@ -64,6 +66,7 @@ for row = 1:row_count
         % Get random number, if smaller than p, add a plant
         if plant_chance < prob_init_plant
             grids(row, col, 1) = PLANT;
+            %pollen_conc_grids(row,col,1) = init_pollen_count;
 
         % Now adding animals if smaller than p
         elseif animal_chance < prob_init_animal
@@ -104,6 +107,12 @@ for frame = 2:numIterations
     extended_animal_grid(2:end-1, 2:end-1) = animal_conc_grids(:,:,frame-1);
     extended_pollen_grid(2:end-1, 2:end-1) = pollen_conc_grids(:,:,frame-1);
 
+    % Creating grids for changes in the concentrations of different things
+    % For example the delta pollen concentration grid will store values of the pollen change amount and then add to the
+    % actual pollen grid to update the values
+    delta_pollen_conc = zeros(row_count, col_count);
+    delta_animal_conc = zeros(row_count, col_count);
+
     
     %% Loop for updating each cell in the grid
     % Loop over the indices corresponding to original(non-extended) grid
@@ -114,6 +123,8 @@ for frame = 2:numIterations
             current_cell = extended_grid(row, col);
             current_animal_conc = extended_animal_grid(row,col);
             current_pollen_conc = extended_pollen_grid(row,col);
+            delta_pollen_value = 0;
+            delta_animal_value = 0;
 
             % Updated Cell Values
             updated_cell = current_cell;
@@ -173,6 +184,9 @@ for frame = 2:numIterations
             % Total plant count
             plant_count = poll_plant_count + norm_plant_count;
 
+
+
+
             % Getting total population of all animals in neighboring cells
             neighbor_animal_pop = 0;
             if(animal_count > 0)
@@ -184,58 +198,21 @@ for frame = 2:numIterations
 
             % Getting total number of all pollen in neighboring cells
             neighbor_pollen_conc = 0;
-            if (pollen_count > 0)
-                for val = 1:length(neighbors)
-                    neighbor_pollen_conc = neighbor_pollen_conc + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
-                    neighbor_pollen_conc = round(neighbor_pollen_conc);
-                end
+            for val = 1:length(neighbors)
+                neighbor_pollen_conc = neighbor_pollen_conc + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
+                neighbor_pollen_conc = round(neighbor_pollen_conc);
             end
 
+        %% Actual Mechanics %%
 
-            % Empty cell behavior
-            if(current_cell == EMPTY)
-                % Plant is producing pollen on this cell
-                if(plant_count > 0)
-                    % All neighboring plants have a chance to produce pollen
-                    for val = 1:plant_count
-                        if(rand < prob_pollen_production)
-                            updated_cell = POLLEN;
-                            updated_pollen_conc = updated_pollen_conc + init_pollen_count;
-                        end
-                    end
-                elseif(pollen_count > 0)
-                    % Setting pollen concentration based on neighbors
-                    % Using sum of all neighbor values so no * pollen_count needed
-                    % Becomes pollen if it will have more than 1 pollen within it after timestep, else stays empty
-                    new_pollen_count = neighbor_pollen_conc * pollen_diffuse_rate;
-                    if(new_pollen_count >= 1)
-                        updated_cell = POLLEN;
-                        updated_pollen_conc = new_pollen_count;
-                    else
-                        updated_cell = EMPTY;
-                        updated_pollen_conc = 0;
-                    end
-                else
-                    updated_cell = EMPTY;
-                    updated_pollen_conc= 0;
-                end
-            end
-
-
-            % Pollen Cell Behavior
-            if(current_cell == POLLEN)
-                % If neighboring no empty cells or other pollen cells, stay same
-                if(empty_count <= 0 && pollen_count <= 0)
-                    updated_cell = POLLEN;
-                end
-
+            % Pollen Diffusion Behavior
+            if(current_pollen_conc > 0 || plant_count > 0 || neighbor_pollen_conc > 0)
                 % Plants produce pollen and add it to this cells current pollen
                 concentration_gain1 = 0;
                 if(plant_count > 0)
                     % All neighboring plants have a chance to produce pollen
                     for val = 1:plant_count
                         if(rand < prob_pollen_production)
-                            updated_cell = POLLEN;
                             concentration_gain1 = concentration_gain1 + init_pollen_count;
                         end
                     end
@@ -244,8 +221,9 @@ for frame = 2:numIterations
                 % If there are empty cells than concentration will be decreased by
                 % the empty cell count times the diffuse rate since each empty cell
                 % will take current concentration * diffuse rate out
+                % Only happens if there is no neighboring pollen
                 concentration_loss1 = 0;
-                if(empty_count > 0)
+                if(empty_count > 0 && neighbor_pollen_conc <= 0)
                     concentration_loss1 = current_pollen_conc * ((pollen_diffuse_rate) * empty_count);
                     % If losing more concentration than is possible, just lose current amount
                     % Similar for negative values
@@ -261,11 +239,13 @@ for frame = 2:numIterations
                 % based on neighbor populations
                 concentration_loss2 = 0;
                 concentration_gain2 = 0;
-                if(pollen_count > 0)
+                if(neighbor_pollen_conc > 0)
                     for val = 1:length(neighbors)
                         % Only do this stuff to pollen neighbors
-                        if(neighbors(val) == POLLEN) 
-                            cur_neighbor_conc = neighbors_pollen(val);
+                        rowval = neighbor_coords(val,1)-1;
+
+                        if(extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2)) > 0) 
+                            cur_neighbor_conc = extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
                             % Adding to this cell if neighbor has more pollen
                             if(cur_neighbor_conc > current_pollen_conc)
                                 % Gaining concentration, so gain is increased
@@ -283,35 +263,29 @@ for frame = 2:numIterations
                         concentration_loss2 = 0;
                     end
                 end
-
-
                 % Setting the new populations based on population loss / gain
-                updated_pollen_conc = (current_pollen_conc - concentration_loss1 - concentration_loss2 + concentration_gain1 + concentration_gain2);
-
-                % Becomes empty if no pollen left, otherwise empty
-                if(updated_pollen_conc >= 1)
-                    updated_cell = POLLEN;
-                else
-                    updated_cell = EMPTY;
-                    updated_pollen_conc = 0;
-                end
+                delta_pollen_value = (current_pollen_conc - concentration_loss1 - concentration_loss2 + concentration_gain1 + concentration_gain2);
             end
 
+            % Empty cell behavior
+            if(current_cell == EMPTY)
+
+            end
+
+
+
+
+            % Animal Behavior
             % CONCENTRATION GRIDS SHOULD NOT BE UPDATED DURING LOOP BUT CONSTANTLY POTENTIALLY MAYBE
             % OR MAKE AN CONC CHANGE GRID, temp grid that stores changes to the concentrations and then just adds it to the normal grid
             % Is this even needed or does that happen implicitly with the structure we already have?
             % Animal Stuff
             % If animal next to pollen
                 % Find the max pollen neighbor
-                % X animals will move to that neighbor based on animal_diffuse_rate (with pollen)
-
-
-
-
-
-
-
-
+                % X animals will move to that neighbor based on animal_pollen_diffuse_rate
+            if(current_cell == ANIMAL)
+            end 
+                
 
             % Plant Behavior
             if(current_cell == PLANT)
@@ -321,9 +295,22 @@ for frame = 2:numIterations
             
             % Updating next grid with the new cell value
             grids(row-1, col-1 , frame) = updated_cell;
-            pollen_conc_grids(row-1, col-1, frame) = updated_pollen_conc;
+
+            % Updating the delta concentration grids
+            delta_pollen_conc(row-1, col-1) = delta_pollen_conc(row-1, col-1) + delta_pollen_value;
+            delta_animal_conc(row-1, col-1) = delta_animal_conc(row-1, col-1) + delta_animal_value;
+
+            % Making sure no concentration is negative
+            if(delta_pollen_conc(row-1, col-1) < 0)
+                delta_pollen_conc(row-1, col-1) = 0;
+            end
         end
     end
+
+    % Updating the actual concentration grids
+    pollen_conc_grids(:, :, frame) = delta_pollen_conc(:,:);
+    animal_conc_grids(:, :, frame) = delta_animal_conc(:,:);
+    
     
     % % Recalculate the number of animals and plants for tracking
     % animal_counter(frame) = sum(sum(grids(:,:,frame)==ANIMAL)) +...
@@ -343,6 +330,7 @@ disp("All grids calculated");
 viz_fig = figure;
 viz_axes = axes(viz_fig);
 viz_fig2 = figure;
+viz_fig3 = figure;
 
 % % Set the colors
 % map = [ 1       1       1;          % Empty Cell: white
@@ -376,7 +364,10 @@ for i = 1:numIterations
     % Turn each grid into an image
     heatmap(viz_fig2, grids(:,:,i));
     hmap = heatmap(viz_fig, pollen_conc_grids(:, :, i));
+    hmap2 = heatmap(viz_fig3, animal_conc_grids(:, :, i));
     caxis(hmap, [0 30]);
+    caxis(hmap2, [0 30]);
+
     
     % Draw text
     % time_counter_text = text(viz_axes,0.1,1.025,"Current Time Step: " + ...
