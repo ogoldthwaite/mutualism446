@@ -206,25 +206,7 @@ for frame = 2:numIterations
                     neighbor_poll_animal_conc = neighbor_poll_animal_conc + + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
                     neighbor_poll_animal_conc = round(neighbor_poll_animal_conc);
                 end
-            end
-            
-            % Getting total amount of pollen in neighboring pollen cells
-%             if (pollen_count > 0)
-%                 pollen_n_pollen_conc = 0;
-%                 for val = 1:length(neighbors==POLLEN)
-%                     pollen_n_pollen_conc = pollen_n_pollen_con + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
-%                     pollen_n_pollen_conc = round(pollen_n_pollen_conc);
-%                 end
-%             end
-            
-            % Getting total amt of pollen in neighboring pollinated plants
-            if (poll_plant_count > 0)
-                poll_plant_n_conc = 0;
-                for val = 1:length(neighbors==POLLINATED_ANIMAL)
-                    poll_plant_n_conc = poll_plant_n_conc + + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
-                    poll_plant_n_conc = round(poll_plant_n_conc);
-                end
-            end
+            end            
             
             % Pollen Diffusion Behavior
             if(current_pollen_conc > 0 || plant_count > 0 || neighbor_pollen_conc > 0)
