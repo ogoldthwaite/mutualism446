@@ -314,7 +314,6 @@ colormap(states_axes, map);
 disp("Drawing...");
 for i = 1:numIterations
 
-    
     % Uncomment following line to allow for frame-by-frame viewing of grid
     %   w = waitforbuttonpress;
     
