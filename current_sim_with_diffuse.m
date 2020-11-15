@@ -9,40 +9,38 @@ rng_set = rng(123456789);
 
 % Time-related variables
 dt = 1;             % timestep, increment by days, need to go by hours
-simLength = 200;    % length of simulation: 1 year
+simLength = 3000;    % length of simulation: 1 year
 numIterations = 1 + simLength/dt;
-animation_fps = 50;  % Speed of visualization
+animation_fps = 10000;  % Speed of visualization
 
 % Grid dimensions
-row_count = 50; % width
-col_count = 50; % length
+row_count = 300; % width
+col_count = 300; % length
 
 %% Constants %%
 EMPTY = 0;
-GROWING_PLANT = 2;
-PLANT = 3;
-POLLINATED_PLANT = 4;
-ANIMAL = 5;
-POLLINATED_ANIMAL = 6;
-POLLEN = 7;
+PLANT = 1;
+POLLINATED_PLANT = 2;
+REFRACTORY_PLANT = 3;
+ANIMAL = 4;
 
-% Plant Parameter
-prob_plant_death = 0.05; % probability plant death at each timestep
-prob_plant_growth = 0.1; % probability plant growth at each timestep
+% Plant Parameters
 init_plant_count = 100; % Number of plants at initial plant spawn points
-prob_plant_reproduce = 0.1; % probability the plant reproduces if other conditions are met
 prob_init_plant = 0.01; % initial probability a cell is plant
+prob_plant_death = 0.01; % probability plant death at each timestep
+prob_plant_reproduce = 0.2; % probability the plant reproduces if other conditions are met
 plant_reproduce_count = 1; % Number of new plants when plant reproduction occurs
-init_plant_count = 5; % Number of initial plants at a location
-
+% Amount of time that it takes plants to be able to reproduce again, so it doesnt happen too often
+% Plants in refractory period also do not produce pollen to hopefully stimulate more movement
+plant_refractory_time = 365; 
 
 % Animal Parameters
-init_animal_count = 100; % Number of animals at initial animal spawn points
+init_animal_count = 25; % Number of animals at initial animal spawn points
 prob_init_animal = 0.01; % initial probability a cell is animal
-animal_reproduce_count = 2; % Number of new animals when animal reproduction occurs if other conditions are met
-prob_animal_death = 0.03; % probability of animal death at each timestep
-prob_animal_reproduce = 0.05; % chance 2 animals reproduce if conditions are good
-prob_random_move = 0.0; % chance an animal will move randomly with no stimuli
+animal_reproduce_count = 1; % Number of new animals when animal reproduction occurs if other conditions are met
+prob_animal_death = 0.015; % probability of animal death at each timestep
+prob_animal_reproduce = 0.2; % chance 2 animals reproduce if conditions are good
+prob_random_move = 0.1; % chance an animal will move randomly with no stimuli
 animal_pollen_diffuse_rate = 0.8; % Amount of animals that will diffuse to pollen tile
 animal_empty_diffuse_rate = 0.01; % Amount of animals that will diffuse to empty tile
 
@@ -51,6 +49,7 @@ init_pollen_count = 100;     % Initial amount of pollen a pollinated plant has
 pollen_diffuse_rate = 0.01; % Amount of pollen that will diffuse
 prob_pollen_production = 0.8; % chance a plant will produce pollen
 prob_pollen_spread = 0.15; % chance pollen spreads to an adjacent empty cell
+
 
 %% Counters for statistics
 plant_counter = zeros(1, numIterations); % Keep track # of plants
@@ -65,6 +64,7 @@ grids = ones(row_count, col_count, numIterations) * EMPTY;
 plant_pop_grids = zeros(row_count, col_count, numIterations) * EMPTY;
 animal_pop_grids = zeros(row_count, col_count, numIterations) * EMPTY;
 pollen_conc_grids = zeros(row_count, col_count, numIterations) * EMPTY;
+grow_time_grid = zeros(size(grids( : , :))+2) * EMPTY; % Grid that stores current age of plant
 
 for row = 1:row_count
     for col = 1:col_count
@@ -108,6 +108,7 @@ for frame = 2:numIterations
     extended_animal_grid = zeros(extended_grid_size) * EMPTY; 
     extended_pollen_grid = zeros(extended_grid_size) * EMPTY; 
     extended_plant_grid = zeros(extended_grid_size) * EMPTY;
+    extended_grow_grid = zeros(extended_grid_size) * EMPTY;
 
     % Grids for calculating change from timestep to timestep
     delta_pollen_grid = zeros(extended_grid_size);
@@ -132,10 +133,9 @@ for frame = 2:numIterations
             current_pollen_conc = extended_pollen_grid(row,col);
             current_animal_pop = extended_animal_grid(row,col);
             current_plant_pop = extended_plant_grid(row,col);
+            current_grow_time = grow_time_grid(row,col);
 
             updated_cell = current_cell;
-            updated_animal_pop_cell = current_pollen_conc;
-            updated_pollen_cell = current_pollen_conc;
             
             % Getting Moore Neighborhood
             self = extended_grid(row, col);
@@ -174,10 +174,9 @@ for frame = 2:numIterations
             %% Update cell
             % Getting different counts of neighbors
             empty_count = sum(neighbors == EMPTY);
-            pollen_count = sum(neighbors == POLLEN);
             norm_plant_count = sum(neighbors == PLANT);
             poll_plant_count = sum(neighbors == POLLINATED_PLANT);
-            grow_plant_count = sum(neighbors == GROWING_PLANT);
+            refrac_plant_count = sum(neighbors == REFRACTORY_PLANT);
             norm_animal_count = sum(neighbors == ANIMAL);
             poll_animal_count = sum(neighbors == POLLINATED_ANIMAL);
     
@@ -188,34 +187,7 @@ for frame = 2:numIterations
             plant_count = poll_plant_count + norm_plant_count;        
             % Total amount of neighbors
             num_neighbors = animal_count + plant_count + pollen_count;
-
-            % Getting total population of all animals in neighboring cells
-            if(animal_count > 0)
-                neighbor_animal_pop = 0;
-                for val = 2:length(neighbors==ANIMAL)
-                    neighbor_animal_pop = neighbor_animal_pop + extended_animal_grid(neighbor_coords(val,1), neighbor_coords(val,2));                 
-                    neighbor_animal_pop = round(neighbor_animal_pop);
-                end
-            end
-            
-            % Getting total amount of pollen in neighboring plant cells
-            if (plant_count > 0)
-                plant_n_pollen_conc = 0;
-                for val = 2:length(neighbors==PLANT)
-                    plant_n_pollen_conc = plant_n_pollen_conc + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
-                    plant_n_pollen_conc = round(plant_n_pollen_conc);
-                end
-            end
-            
-            % Getting total amt of pollen in neighboring pollinated animals
-            if (poll_animal_count > 0)
-                neighbor_poll_animal_conc = 0;
-                for val = 2:length(neighbors==POLLINATED_ANIMAL)
-                    neighbor_poll_animal_conc = neighbor_poll_animal_conc + extended_pollen_grid(neighbor_coords(val,1), neighbor_coords(val,2));
-                    neighbor_poll_animal_conc = round(neighbor_poll_animal_conc);
-                end
-            end        
-            
+    
             % Getting total number of all pollen in neighboring cells
             neighbor_pollen_conc = 0;
             for val = 2:length(neighbors)
@@ -251,6 +223,12 @@ for frame = 2:numIterations
                         concentration_loss2 = concentration_loss2 + (current_pollen_conc * pollen_diffuse_rate);
                     end
                 end
+
+                if(current_animal_pop >= 1)
+                    delta_pollen_grid(row,col) = intmin('int32');
+                end
+
+
                 % Setting the new populations based on population loss / gain
                 delta_pollen_grid(row,col) = delta_pollen_grid(row,col) + (concentration_gain1 - concentration_loss2);
             end
@@ -259,6 +237,8 @@ for frame = 2:numIterations
             % Animal Diffusion Behavior
             if(current_animal_pop > 0)
     
+                delta_animal_grid(row,col) = delta_animal_grid(row,col) - round(prob_animal_death * current_animal_pop);
+
                 % Finding max pollen spot
                 [max_pollen_conc, max_index] = max(pollen_neighbors);
                 
@@ -285,22 +265,22 @@ for frame = 2:numIterations
                 %% Setting cell to plant if it should be, higher priority than animal
                 if(poll_plant_count > 0)
                     updated_cell = PLANT;
-                    delta_plant_grid(row,col) = delta_plant_grid(row,col) + init_plant_count;
+                    delta_plant_grid(row,col) = delta_plant_grid(row,col) + plant_reproduce_count;
                 %% Setting cell to empty or animal depending on animal population
                 elseif(current_animal_pop >= 1)
                     updated_cell = ANIMAL;
                 else
                     updated_cell = EMPTY;
                 end
-            end
+            
 
-            if(current_cell == ANIMAL)
+            elseif(current_cell == ANIMAL)
                 % Animals dying, current population * death rate is how many are lost
-                delta_animal_grid(row,col) = delta_animal_grid(row,col) - round(prob_animal_death * current_animal_pop);
+                % delta_animal_grid(row,col) = delta_animal_grid(row,col) - round(prob_animal_death * current_animal_pop);
 
                 %% Reproduction, at least 1 plant around, no other animal cell because multiple animals in this one
                 %% Assuming that all animals at this spot will reproduce at once
-                if(plant_count > 0 && rand < prob_animal_reproduce)
+                if( (plant_count > 0 || refrac_plant_count > 0) && rand < prob_animal_reproduce)
                     delta_animal_grid(row,col) = delta_animal_grid(row,col) + round(animal_reproduce_count * current_animal_pop/2); 
                 end
 
@@ -310,21 +290,26 @@ for frame = 2:numIterations
                 else
                     updated_cell = ANIMAL;
                 end
-            end
+        
 
-            if(current_cell == PLANT)
+            elseif(current_cell == PLANT)
                 % Plants dying, current pop * death rate is how many are lost
-                delta_plant_grid(row,col) = delta_plant_grid(row,col) - round(prob_plant_death * current_plant_pop);
+                % delta_plant_grid(row,col) = delta_plant_grid(row,col) - round(prob_plant_death * current_plant_pop);
+                if(rand < prob_plant_death)
+                    delta_plant_grid(row,col) = intmin('int32');
+                    current_plant_pop = 0;
+                    updated_cell = EMPTY;
+                end
+
+                %% Plants can grow in these cells too just like in empty
+                if(poll_plant_count > 0)
+                    updated_cell = PLANT;
+                    delta_plant_grid(row,col) = delta_plant_grid(row,col) + plant_reproduce_count;
+                end
 
                 %% Plant reproduction, needs at least one animal cell around to pollinate
                 if(animal_count > 0 && rand < prob_plant_reproduce)
                     updated_cell = POLLINATED_PLANT;
-                end
-
-                % If surrounded by too many plants, will die.
-                if(plant_count > 7)
-                    delta_plant_grid(row,col) = intmin('int32');
-                    current_plant_pop = 0;
                 end
 
                 % Stays normal plant or empty depending on population
@@ -337,24 +322,52 @@ for frame = 2:numIterations
                         updated_cell = PLANT;
                     end
                 end
-            end
+            
 
             %% This cell state grows the new plants, and is seen by empty cells to spread plants through space
-            if(current_cell == POLLINATED_PLANT)
+            elseif(current_cell == POLLINATED_PLANT)
                 % Plants dying, current pop * death rate is how many are lost
-                delta_plant_grid(row,col) = delta_plant_grid(row,col) - round(prob_plant_death * current_plant_pop);
+                % delta_plant_grid(row,col) = delta_plant_grid(row,col) - round(prob_plant_death * current_plant_pop);
 
                 %% Assumes that all plants in this spot will have a chance reproduce every timestep
                 delta_plant_grid(row,col) = delta_plant_grid(row,col) + round(prob_plant_reproduce * current_plant_pop);
-                updated_cell = PLANT;
+                updated_cell = REFRACTORY_PLANT;
+
+                
 
                 % Becomes normal plant or empty depending on population
                 if(current_plant_pop < 1)
                     updated_cell = EMPTY;
                 else
+                    updated_cell = REFRACTORY_PLANT;
+                end
+            
+
+            % Refractory plant state is just like a holding state so no new plants are produced from it
+            elseif(current_cell == REFRACTORY_PLANT)
+
+                %% Plants can grow in these cells too just like in empty
+                if(poll_plant_count > 0)
+                    updated_cell = PLANT;
+                    delta_plant_grid(row,col) = delta_plant_grid(row,col) + plant_reproduce_count;
+                end
+                
+                if(current_grow_time < plant_refractory_time)
+                    grow_time_grid(row,col) = grow_time_grid(row,col) + 1;
+                    updated_cell = REFRACTORY_PLANT;
+                else % (current_grow_time >= plant_refractory_time)
+                    grow_time_grid(row,col) = 0;
                     updated_cell = PLANT;
                 end
+
+                if(rand < prob_plant_death)
+                    delta_plant_grid(row,col) = intmin('int32');
+                    current_plant_pop = 0;
+                    grow_time_grid(row,col) = 0;
+                    updated_cell = EMPTY;
+                end
             end
+
             
             % Updating next grid with the new cell value
             grids(row-1, col-1 , frame) = updated_cell;
@@ -364,13 +377,13 @@ for frame = 2:numIterations
         plant_pop_grids(:,:,frame) = plant_pop_grids(:,:,frame-1) + delta_plant_grid(2:end-1, 2:end-1);
 
         %% Making sure none of these grids have < 0 values
-        pollen_neg_vals = (pollen_conc_grids(:,:,frame) > 0);
+        pollen_neg_vals = (pollen_conc_grids(:,:,frame) > 0.01);
         pollen_conc_grids(:,:,frame) = pollen_neg_vals .* pollen_conc_grids(:,:,frame);
 
-        animal_neg_vals = (animal_pop_grids(:,:,frame) > 0);
+        animal_neg_vals = (animal_pop_grids(:,:,frame) > 0.01);
         animal_pop_grids(:,:,frame) = animal_neg_vals .* animal_pop_grids(:,:,frame);
 
-        plant_neg_vals = (plant_pop_grids(:,:,frame) > 0);
+        plant_neg_vals = (plant_pop_grids(:,:,frame) > 0.01);
         plant_pop_grids(:,:,frame) = plant_neg_vals .* plant_pop_grids(:,:,frame);
         
     end
@@ -392,9 +405,9 @@ disp("All grids calculated");
 %% Visualize the grid
 
 % Create the window for the animation
-% states_fig = figure;
-% animal_pop_fig = figure;
-% pollen_fig = figure;
+states_fig = figure;
+animal_pop_fig = figure;
+pollen_fig = figure;
 
 % states_axes = axes(states_fig);
 
@@ -413,24 +426,26 @@ map = [ 1       1       1;          % Empty Cell: white
 % axis off;
 % axis equal;
 % hold on;
+w = waitforbuttonpress;
+
 
 disp("Drawing...");
 for i = 1:numIterations
 
     % Uncomment following line to allow for frame-by-frame viewing of grid
-    %   w = waitforbuttonpress;
+    % w = waitforbuttonpress;
     
     % states_heat = heatmap(states_fig, grids(:,:,i));
-    % animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', summer);
-    % pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i));
+    % animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', summer, 'Title', "Animal Populations");
+    % pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i), 'Title',"Pollen Concentrations");
     
     % caxis(animal_pop_heat, [0 30]);
     % caxis(pollen_heat, [0 1000]);
 
-    % Turn each grid into an image
-%     heatmap(animal_pop_fig, animal_pop_grids(:,:,i));
-%     hmap = heatmap(states_fig, animal_pop_grids(:, :, i));
-%     caxis(hmap, [0 30]);
+    %% Turn each grid into an image
+    % heatmap(animal_pop_fig, animal_pop_grids(:,:,i));
+    % hmap = heatmap(states_fig, animal_pop_grids(:, :, i));
+    % caxis(hmap, [0 30]);
     
     if(i>1) % Refresh the image
         % delete(time_counter_text);
@@ -449,7 +464,7 @@ for i = 1:numIterations
     % plant_counter_text = text(states_axes,0.9,0.05,"Plants: " + ...
     %     plant_counter(i), 'Units', 'Normalized');
     
-    % pause(1/animation_fps);
+    pause(1/animation_fps);
 end
 
 % Slows down simulation
@@ -463,6 +478,15 @@ end
 % legend([s1, s2, s3, s4, s5, s6, s7], {'Empty', 'Growing Plant', 'Plant'...
 %     'Pollinated Plant', 'Animal', 'Pollinated Animal', 'Pollen'}, ...
 %     'Location', 'bestoutside');
+
+
+    states_heat = heatmap(states_fig, grids(:,:,i));
+    animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', summer);
+    pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i));
+    
+    caxis(animal_pop_heat, [0 30]);
+    caxis(pollen_heat, [0 1000]);
+
 
 % Create the graphs for the counters
 pollen_fig = figure;
