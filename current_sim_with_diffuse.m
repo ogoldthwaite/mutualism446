@@ -1,6 +1,6 @@
 % CS446 -- Computational Modeling and Simulation II
 % Owen Goldthwaite, Gautam Mitra, Lolo Niemiec
-% November 1, 2020
+% November 14, 2020
 % Generic pollination mutualism cellular automata model
 
 %% Simulation Parameters %%%
@@ -9,13 +9,13 @@ rng_set = rng(123456789);
 
 % Time-related variables
 dt = 1;             % timestep, increment by days, need to go by hours
-simLength = 3000;    % length of simulation: 1 year
+simLength = 200;    % length of simulation: 1 year
 numIterations = 1 + simLength/dt;
 animation_fps = 10000;  % Speed of visualization
 
 % Grid dimensions
-row_count = 300; % width
-col_count = 300; % length
+row_count = 30; % width
+col_count = 30; % length
 
 %% Constants %%
 EMPTY = 0;
@@ -86,10 +86,9 @@ for row = 1:row_count
 end
 
 % First value for counters
-animal_counter(1) = sum(sum(grids(:,:,1)==ANIMAL)) + ...
-                              sum(sum(grids(:,:,1)==POLLINATED_ANIMAL));
+animal_counter(1) = sum(sum(grids(:,:,1)==ANIMAL));
 plant_counter(1) = sum(sum(grids(:,:,1)==PLANT)) + ...
-                             sum(sum(grids(:,:,1)==GROWING_PLANT)) + ...
+                             sum(sum(grids(:,:,1)==REFRACTORY_PLANT)) + ...
                              sum(sum(grids(:,:,1)==POLLINATED_PLANT));
 animal_pop_counter(1) = sum(sum(animal_pop_grids(:,:,1)));
 pollen_conc_counter(1) = sum(sum(pollen_conc_grids(:,:,1)));
@@ -178,15 +177,14 @@ for frame = 2:numIterations
             poll_plant_count = sum(neighbors == POLLINATED_PLANT);
             refrac_plant_count = sum(neighbors == REFRACTORY_PLANT);
             norm_animal_count = sum(neighbors == ANIMAL);
-            poll_animal_count = sum(neighbors == POLLINATED_ANIMAL);
     
             % Total animal count
-            animal_count = norm_animal_count + poll_animal_count;
+            animal_count = norm_animal_count;
             % Total plant count
             % Note: pollen and growing plants not included 
             plant_count = poll_plant_count + norm_plant_count;        
             % Total amount of neighbors
-            num_neighbors = animal_count + plant_count + pollen_count;
+            num_neighbors = animal_count + plant_count;
     
             % Getting total number of all pollen in neighboring cells
             neighbor_pollen_conc = 0;
@@ -389,10 +387,9 @@ for frame = 2:numIterations
     end
     
     % Recalculate the number of animals and plants for tracking
-    animal_counter(frame) = sum(sum(grids(:,:,frame)==ANIMAL)) +...
-                              sum(sum(grids(:,:,frame)==POLLINATED_ANIMAL));
+    animal_counter(frame) = sum(sum(grids(:,:,frame)==ANIMAL));
     plant_counter(frame) = sum(sum(grids(:,:,frame)==PLANT)) + ...
-                             sum(sum(grids(:,:,frame)==GROWING_PLANT)) + ...
+                             sum(sum(grids(:,:,frame)==REFRACTORY_PLANT)) + ...
                              sum(sum(grids(:,:,frame)==POLLINATED_PLANT));
     animal_pop_counter(frame) = sum(sum(animal_pop_grids(:,:,frame)));
     pollen_conc_counter(frame) = sum(sum(pollen_conc_grids(:,:,frame)));
