@@ -1,0 +1,50 @@
+// copy pasta these right after the viz loop
+
+pollen_colors = [1 1 1; 243/255 188/255 46/255];
+colormap(pollen_colors);
+pollen_colors = imresize(pollen_colors, [64, 3]);
+pollen_colors = min(max(pollen_colors, 0), 1);
+
+animal_colors = [1 1 1; 101/255 67/255 33/255];
+colormap(animal_colors);
+animal_colors = imresize(animal_colors, [64, 3]);
+animal_colors = min(max(animal_colors, 0), 1);
+
+states_heat = heatmap(states_fig, grids(:,:,i));
+animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', animal_colors);
+pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i), 'Colormap', pollen_colors);
+
+title(states_heat, "Cellular Automata Grid");
+title(animal_pop_heat, "Animal Population Heatmap");
+title(pollen_heat, "Pollen Concentration Heatmap");
+
+/////////////////////////////////////////////////
+// Making population charts
+pop_fig = figure;
+pop_axes = subplot(1, 2, 1);
+plot(1:numIterations, plant_pop_counter, 'color', [1 0.5 0.17]);
+
+
+title("Plant Population Over Time");
+ylabel("Plant Pop");
+xlabel("Time step");
+% ylim(pollen_axes, [0, max(animal_counter)+5]); % Extend the maximum y limit
+
+subplot(1,2,2);
+plot(1:numIterations, animal_pop_counter);
+title("Animal Population Over Time");
+ylabel("Animal Pop");
+xlabel("Time step");
+% ylim(animal_axes, [0, max(plant_counter)+5]); % Extend the maximum y limit
+
+combo_fig = figure;
+combo_axes = axes(combo_fig);
+plot(combo_axes, 1:numIterations, plant_pop_counter, 'color', [1 0.5 0.17]);
+hold on;
+plot(combo_axes, 1:numIterations, animal_pop_counter, 'color', [0 0.4470 0.7410]);
+ylabel(combo_axes, "Population");
+xlabel(combo_axes, "Time step");
+title(combo_axes, "Plant and Animal Populations Over Time");
+legend(combo_axes, "Plant", "Animal");
+xlim(combo_axes, [0 numIterations + 5]);
+hold off;
