@@ -1,0 +1,19 @@
+// copy pasta these right after the viz loop
+
+pollen_colors = [1 1 1; 243/255 188/255 46/255];
+colormap(pollen_colors);
+pollen_colors = imresize(pollen_colors, [64, 3]);
+pollen_colors = min(max(pollen_colors, 0), 1);
+
+animal_colors = [1 1 1; 101/255 67/255 33/255];
+colormap(animal_colors);
+animal_colors = imresize(animal_colors, [64, 3]);
+animal_colors = min(max(animal_colors, 0), 1);
+
+states_heat = heatmap(states_fig, grids(:,:,i));
+animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', animal_colors);
+pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i), 'Colormap', pollen_colors);
+
+title(states_heat, "Cellular Automata Grid");
+title(animal_pop_heat, "Animal Population Heatmap");
+title(pollen_heat, "Pollen Concentration Heatmap");
