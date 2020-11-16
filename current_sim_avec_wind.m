@@ -9,13 +9,13 @@ rng_set = rng(123456789);
 
 % Time-related variables
 dt = 1;             % timestep, increment by days, need to go by hours
-simLength = 1000;    % length of simulation: 1 year
+simLength = 250;    % length of simulation: 1 year
 numIterations = 1 + simLength/dt;
 animation_fps = 10000;  % Speed of visualization
 
 % Grid dimensions
-row_count = 50; % width
-col_count = 50; % length
+row_count = 30; % width
+col_count = 30; % length
 
 %% Constants %%
 EMPTY = 0;
@@ -36,7 +36,7 @@ plant_refractory_time = 100;
 
 % Animal Parameters
 init_animal_count = 25; % Number of animals at initial animal spawn points
-prob_init_animal = 0.01; % initial probability a cell is animal
+prob_init_animal = 0.00; % initial probability a cell is animal
 animal_reproduce_count = 1; % Number of new animals when animal reproduction occurs if other conditions are met
 prob_animal_death = 0.015; % probability of animal death at each timestep
 prob_animal_reproduce = 0.2; % chance 2 animals reproduce if conditions are good
@@ -56,7 +56,7 @@ NORTH = 5;
 EAST  = 6;
 SOUTH = 7;
 WEST =  8;
-prob_wind_spawn = 0.001; % Percent chance that a cell on the wind grid develops wind
+prob_wind_spawn = 0.000; % Percent chance that a cell on the wind grid develops wind
 prob_wind_spread = 0.1; % Chance that wind spreads to an empty cell
 wind_dissipate_time = 5000; % Time it takes for wind to disappear
 
@@ -512,6 +512,15 @@ map = [ 1       1       1;          % Empty Cell: white
 % hold on;
 w = waitforbuttonpress;
 
+pollen_colors = [1 1 1; 243/255 188/255 46/255];
+colormap(pollen_colors);
+pollen_colors = imresize(pollen_colors, [64, 3]);
+pollen_colors = min(max(pollen_colors, 0), 1);
+
+animal_colors = [1 1 1; 101/255 67/255 33/255];
+colormap(animal_colors);
+animal_colors = imresize(animal_colors, [64, 3]);
+animal_colors = min(max(animal_colors, 0), 1);
 
 disp("Drawing...");
 for i = 1:numIterations
@@ -519,9 +528,13 @@ for i = 1:numIterations
     % Uncomment following line to allow for frame-by-frame viewing of grid
     % w = waitforbuttonpress;
     
-    % states_heat = heatmap(states_fig, wind_grids(:,:,i));
-    % animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', summer, 'Title', "Animal Populations");
-    % pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i), 'Title',"Pollen Concentrations");
+    % states_heat = heatmap(states_fig, grids(:,:,i));
+    % animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', animal_colors);
+    % pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i), 'Colormap', pollen_colors);
+
+    % title(states_heat, "Cellular Automata Grid");
+    % title(animal_pop_heat, "Animal Population Heatmap");
+    % title(pollen_heat, "Pollen Concentration Heatmap");
     
     % caxis(animal_pop_heat, [0 30]);
     % caxis(pollen_heat, [0 1000]);
@@ -541,7 +554,7 @@ for i = 1:numIterations
     %image(states_axes, grids(:, :, i));
     
 %     % Draw text
-    % time_counter_text = text(states_axes,0.1,1.025,"Current Time Step: " + ...
+    % time_counter_text = text(pollen_heat,0.1,1.025,"Current Time Step: " + ...
     %     string(i), 'Units', 'Normalized');
     % animal_counter_text = text(states_axes,0.9,0,"Animals: " + ...
     %         animal_counter(i), 'Units', 'Normalized');
@@ -551,47 +564,35 @@ for i = 1:numIterations
     pause(1/animation_fps);
 end
 
-% Slows down simulation
-% s1 = plot(nan,'s', 'color', map(1,:), 'MarkerFaceColor', map(1,:));
-% s2 = plot(nan, 's', 'color', map(2,:), 'MarkerFaceColor', map(2,:));
-% s3 = plot(nan, 's', 'color', map(3,:), 'MarkerFaceColor', map(3,:));
-% s4 = plot(nan, 's', 'color', map(4,:), 'MarkerFaceColor', map(4,:));
-% s5 = plot(nan, 's', 'color', map(5,:), 'MarkerFaceColor', map(5,:));
-% s6 = plot(nan, 's', 'color', map(6,:), 'MarkerFaceColor', map(6,:));
-% s7 = plot(nan, 's', 'color', map(7,:), 'MarkerFaceColor', map(7,:));
-% legend([s1, s2, s3, s4, s5, s6, s7], {'Empty', 'Growing Plant', 'Plant'...
-%     'Pollinated Plant', 'Animal', 'Pollinated Animal', 'Pollen'}, ...
-%     'Location', 'bestoutside');
+% Making population charts
+pop_fig = figure;
+pop_axes = subplot(1, 2, 1);
+plot(1:numIterations, plant_pop_counter, 'color', [1 0.5 0.17]);
 
 
-    states_heat = heatmap(states_fig, grids(:,:,i));
-    animal_pop_heat=heatmap(animal_pop_fig, animal_pop_grids(:,:,i), 'Colormap', summer);
-    pollen_heat=heatmap(pollen_fig, pollen_conc_grids(:,:,i));
-    
-    caxis(animal_pop_heat, [0 30]);
-    caxis(pollen_heat, [0 1000]);
-
-
-% Create the graphs for the counters
-pollen_fig = figure;
-pollen_axes = axes(pollen_fig);
-
-animal_fig = figure;
-animal_axes = axes(animal_fig);
-
-plot(pollen_axes, 1:numIterations, plant_pop_counter, 'color', [1 0.5 0.17]);
-
-plot(animal_axes, 1:numIterations, animal_pop_counter);
-
-title(pollen_axes, "Plant Population Throughout Simulation");
-ylabel(pollen_axes, "Plant Pop");
-xlabel(pollen_axes, "Time step");
+title("Plant Population Over Time");
+ylabel("Plant Pop");
+xlabel("Time step");
 % ylim(pollen_axes, [0, max(animal_counter)+5]); % Extend the maximum y limit
 
-title(animal_axes, "Animal Population Throughout Simulation");
-ylabel(animal_axes, "Animal Pop");
-xlabel(animal_axes, "Time step");
+subplot(1,2,2);
+plot(1:numIterations, animal_pop_counter);
+title("Animal Population Over Time");
+ylabel("Animal Pop");
+xlabel("Time step");
 % ylim(animal_axes, [0, max(plant_counter)+5]); % Extend the maximum y limit
+
+combo_fig = figure;
+combo_axes = axes(combo_fig);
+plot(combo_axes, 1:numIterations, plant_pop_counter, 'color', [1 0.5 0.17]);
+hold on;
+plot(combo_axes, 1:numIterations, animal_pop_counter, 'color', [0 0.4470 0.7410]);
+ylabel(combo_axes, "Population");
+xlabel(combo_axes, "Time step");
+title(combo_axes, "Plant and Animal Populations Over Time");
+legend(combo_axes, "Plant", "Animal");
+xlim(combo_axes, [0 numIterations + 5]);
+hold off;
 
 
 disp("Simulation complete!");
