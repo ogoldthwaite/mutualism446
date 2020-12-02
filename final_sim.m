@@ -7,11 +7,11 @@
 % consist of the following:
 % The seed, rng_set
 % Variables in the Time-related variables section
-% Varibles in the grid dimensions section
-% Varibles in the Plant parameters section
-% Varibles in the animal parameters section
-% Varibles in the pollen parameters section
-% Varibles in the wind parameters section
+% Variables in the grid dimensions section
+% Variables in the Plant parameters section
+% Variables in the animal parameters section
+% Variables in the pollen parameters section
+% Variables in the wind parameters section
 
 % Once set run the file through matlab by entering <filename> into console
 % Filename is currently "final_sim" at time of writing. 
