@@ -108,12 +108,18 @@ for row = 1:row_count
         
         % Get random number, if smaller than p, add a plant
         if plant_chance < prob_init_plant
-            grids(row, col, 1) = PLANT;
+            % only update CA grid if there are actually plants being added
+            if init_plant_count > 0 
+                grids(row, col, 1) = PLANT;
+            end
             plant_pop_grids(row,col,1) = init_plant_count;
             
         % Now adding animals if smaller than p
         elseif animal_chance < prob_init_animal
-            grids(row, col, 1) = ANIMAL;
+            % only update CA grid if there are actually animals being added
+            if init_animal_count > 0
+                grids(row, col, 1) = ANIMAL;
+            end
             animal_pop_grids(row, col, 1) = init_animal_count;
         end
     end
